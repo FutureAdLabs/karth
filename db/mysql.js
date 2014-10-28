@@ -30,9 +30,7 @@ exports.stream = function(config, observer) {
     "database": config.mysql.database
   });
 
-  var interval = config.checkInterval || 3000;
-
-  setInterval(function() {
+  var interval = setInterval(function() {
     getNewEvents(function(err, events) {
       if(err) {
           observer.onError(err);
@@ -42,8 +40,10 @@ exports.stream = function(config, observer) {
           });
       }
     });
-  }, interval);
+  }, config.checkInterval || 3000);
 
   // dispose function
-  return function() {};
+  return function() {
+    clearInterval(interval);
+  };
 };
