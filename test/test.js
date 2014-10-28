@@ -14,11 +14,22 @@ var config = {
   }
 };
 
-var source = karth.getSource(config);
+var sources = karth.getStreams(config);
 
-source.subscribe(
+sources.eventStream.subscribe(
   function (x) {
-      console.log('Next: ' + JSON.stringify(x));
+      console.log('Next Event: ' + JSON.stringify(x));
+  },
+  function (err) {
+      console.log('Error: ' + err);
+  },
+  function () {
+      console.log('Completed');
+  });
+
+sources.requestStream.subscribe(
+  function (x) {
+      console.log('Next Request: ' + JSON.stringify(x));
   },
   function (err) {
       console.log('Error: ' + err);
