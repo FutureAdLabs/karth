@@ -1,6 +1,9 @@
 var db = require('mysql-promise')();
 
-var datetime;
+var eventDatetime;
+var requestDateTime;
+
+var initialised = false;
 
 function getCurrentDateTime() {
   var now = new Date();
@@ -9,18 +12,31 @@ function getCurrentDateTime() {
 }
 
 function getNewEvents(callback){
-  var query = "SELECT * FROM events WHERE date_time > '" + datetime  + "';"
+  var query = "SELECT * FROM events WHERE date_time > '" + eventDatetime  + "';"
   
   db.query(query)
   .spread(function(events) {
     callback(null, events);
-    datetime = getCurrentDateTime();
+    eventDatetime = getCurrentDateTime();
   })
   .catch(callback);
 }
 
-exports.stream = function(config, observer) {
-  datetime = getCurrentDateTime();
+function getNewRequests(callback){
+  var query = "SELECT * FROM requests WHERE date_time > '" + requestDatetime  + "';"
+  
+  db.query(query)
+  .spread(function(requests) {
+    callback(null, requests);
+    requestDatetime = getCurrentDateTime();
+  })
+  .catch(callback);
+}
+
+function initialise(config) {
+  if(initialised) {
+    return;
+  }
 
   db.configure({
     "connectionLimit" : config.mysql.connectionLimit,
@@ -30,6 +46,13 @@ exports.stream = function(config, observer) {
     "database": config.mysql.database
   });
 
+  initialised = true;
+};
+
+exports.eventStream = function(config, observer) {
+  initialise(config);
+  eventDatetime = getCurrentDateTime();
+
   var interval = setInterval(function() {
     getNewEvents(function(err, events) {
       if(err) {
@@ -37,6 +60,28 @@ exports.stream = function(config, observer) {
       } else {
           events.forEach(function(event) {
               observer.onNext(event);
+          });
+      }
+    });
+  }, config.checkInterval || 3000);
+
+  // dispose function
+  return function() {
+    clearInterval(interval);
+  };
+};
+
+exports.requestStream = function(config, observer) {
+  initialise(config);
+  requestDatetime = getCurrentDateTime();
+
+  var interval = setInterval(function() {
+    getNewRequests(function(err, requests) {
+      if(err) {
+          observer.onError(err);
+      } else {
+          requests.forEach(function(request) {
+              observer.onNext(request);
           });
       }
     });

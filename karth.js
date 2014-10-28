@@ -9,17 +9,35 @@ function validateConfig(config) {
   return null;
 }
 
-exports.getSource = function(config) {
-  return Rx.Observable.create(function (observer) {
-    var invalidConfig = validateConfig(config);
+exports.getStreams = function(config) {
+  var invalidConfig = validateConfig(config);
+
+  var eventStream = Rx.Observable.create(function (eventObserver) {
     if(invalidConfig) {
-      return observer.onError(invalidConfig);
+      return eventObserver.onError(invalidConfig);
     }
 
     if(config.mysql) {
-      return mysql.stream(config, observer);
+      return mysql.eventStream(config, eventObserver);
     } else {
-      observer.onCompleted();
+      eventObserver.onCompleted();
     }
   });
+
+  var requestStream = Rx.Observable.create(function (requestObserver) {
+    if(invalidConfig) {
+      return requestObserver.onError(invalidConfig);
+    }
+
+    if(config.mysql) {
+      return mysql.requestStream(config, requestObserver);
+    } else {
+      requestObserver.onCompleted();
+    }
+  });
+
+  return {
+    eventStream: eventStream,
+    requestStream: requestStream
+  };
 };
